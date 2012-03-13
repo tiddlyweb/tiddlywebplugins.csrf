@@ -1,5 +1,13 @@
 """
 Middleware to protect against cross site request forgery attacks
+
+To use, 'CSRFProtector' must be added to server_request_filters. One
+way to do that is like this:
+
+    from tiddlywebplugins.csrf import CSRFProtector
+    if CSRFProtector not in config['server_request_filters']:
+        config['server_request_filters'].append(CSRFProtector)
+
 """
 import Cookie
 from datetime import datetime, timedelta

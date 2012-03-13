@@ -1,0 +1,10 @@
+A CSRF protection middleware for TiddlyWeb.
+
+Based on code originally written by Ben Gillies[1] for
+TiddlySpace that has been extracted to its own plugin.
+
+See the pydoc for installation instructions.
+
+BSD License.
+
+[1] http://bengillies.net/

@@ -2,7 +2,7 @@ AUTHOR = 'Chris Dent'
 AUTHOR_EMAIL = 'cdent@peermore.com'
 NAME = 'tiddlywebplugins.csrf'
 DESCRIPTION = 'CSRF Middleware Protector for TiddlyWeb'
-VERSION = '0.1'
+VERSION = '0.2'
 
 
 import os
@@ -22,6 +22,7 @@ setup(
     platforms = 'Posix; MacOS X; Windows',
     packages = find_packages(exclude=['test']),
     install_requires = ['setuptools',
-        'tiddlyweb'],
+        'httpexceptor',
+        'tiddlyweb>=1.3.0'],
     zip_safe = False
     )

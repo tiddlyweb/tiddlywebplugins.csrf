@@ -11,9 +11,9 @@ way to do that is like this:
 """
 import Cookie
 from datetime import datetime, timedelta
+from httpexceptor import HTTP400
 
 from tiddlyweb.util import sha
-from tiddlyweb.web.http import HTTP400
 
 
 class InvalidNonceError(Exception):

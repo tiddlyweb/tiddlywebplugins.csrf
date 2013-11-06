@@ -2,7 +2,7 @@ AUTHOR = 'Chris Dent'
 AUTHOR_EMAIL = 'cdent@peermore.com'
 NAME = 'tiddlywebplugins.csrf'
 DESCRIPTION = 'CSRF Middleware Protector for TiddlyWeb'
-VERSION = '0.2'
+VERSION = '0.3'
 
 
 import os

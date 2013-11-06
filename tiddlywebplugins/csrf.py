@@ -35,7 +35,7 @@ class CSRFProtector(object):
             add a csrf_token header (if we need to)
             """
             user_cookie = Cookie.SimpleCookie()
-            user_cookie.load(environ.get('HTTP_COOKIE', {}))
+            user_cookie.load(str(environ.get('HTTP_COOKIE', {})))
             csrf_cookie = user_cookie.get('csrf_token')
             timestamp = ''
             cookie_user = None

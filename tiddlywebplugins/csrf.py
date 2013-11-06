@@ -9,7 +9,10 @@ way to do that is like this:
         config['server_request_filters'].append(CSRFProtector)
 
 """
-import Cookie
+try:
+    from Cookie import SimpleCookie
+except ImportError:
+    from http.cookies import SimpleCookie
 from datetime import datetime, timedelta
 from httpexceptor import HTTP400
 
@@ -34,7 +37,7 @@ class CSRFProtector(object):
             """
             add a csrf_token header (if we need to)
             """
-            user_cookie = Cookie.SimpleCookie()
+            user_cookie = SimpleCookie()
             user_cookie.load(str(environ.get('HTTP_COOKIE', {})))
             csrf_cookie = user_cookie.get('csrf_token')
             timestamp = ''
@@ -83,7 +86,7 @@ class CSRFProtector(object):
         nonce = form.pop('csrf_token', [''])[0]
         try:
             self.check_csrf(environ, nonce)
-        except InvalidNonceError, exc:
+        except InvalidNonceError as exc:
             raise HTTP400(exc)
 
         return app()

@@ -7,9 +7,13 @@ i.e. tests that ensure we are not vulnerable to CSRF
 from wsgi_intercept import httplib2_intercept
 import wsgi_intercept
 import httplib2
-import Cookie
 import os
 import shutil
+
+try:
+    from Cookie import SimpleCookie
+except ImportError:
+    from http.cookies import SimpleCookie
 
 from datetime import datetime, timedelta
 
@@ -37,7 +41,7 @@ def get_auth(username, password):
     assert response.previous['status'] == '303'
 
     user_cookie = response.previous['set-cookie']
-    cookie = Cookie.SimpleCookie()
+    cookie = SimpleCookie()
     cookie.load(user_cookie)
     return cookie['tiddlyweb_user'].value
 
@@ -69,7 +73,7 @@ def test_validator_no_nonce():
         csrf = CSRFProtector({})
         csrf.check_csrf({}, None)
         raise AssertionError('check_csrf succeeded when no csrf_token supplied')
-    except InvalidNonceError, exc:
+    except InvalidNonceError as exc:
         assert exc.message == 'No csrf_token supplied'
 
 def test_validator_nonce_success():
@@ -125,7 +129,7 @@ def test_validator_nonce_fail():
         csrf = CSRFProtector({})
         csrf.check_csrf(environ, nonce)
         raise AssertionError('check_csrf succeeded when nonce didn\'t match')
-    except InvalidNonceError, exc:
+    except InvalidNonceError as exc:
         assert exc.message == BAD_MATCH_MESSAGE
 
 def test_validator_nonce_hash_fail():
@@ -154,7 +158,7 @@ def test_validator_nonce_hash_fail():
         csrf = CSRFProtector({})
         csrf.check_csrf(environ, nonce)
         raise AssertionError('check_csrf succeeded when nonce didn\'t match')
-    except InvalidNonceError, exc:
+    except InvalidNonceError as exc:
         assert exc.message == BAD_MATCH_MESSAGE
 
 def test_post_data_form_urlencoded():

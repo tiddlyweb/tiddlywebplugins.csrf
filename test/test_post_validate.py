@@ -80,7 +80,7 @@ def test_validator_nonce_success():
     username = 'foo'
     hostname = 'foo.0.0.0.0:8080'
     secret = '12345'
-    timestamp = datetime.now().strftime('%Y%m%d%H')
+    timestamp = datetime.utcnow().strftime('%Y%m%d%H')
     nonce = '%s:%s:%s' % (timestamp, username,
         sha('%s:%s:%s:%s' % (username, timestamp, hostname, secret)).
         hexdigest())
@@ -136,7 +136,7 @@ def test_validator_nonce_hash_fail():
     username = 'foo'
     hostname = 'foo.0.0.0.0:8080'
     secret = '12345'
-    timestamp = datetime.now().strftime('%Y%m%d%H')
+    timestamp = datetime.utcnow().strftime('%Y%m%d%H')
     nonce = '%s:%s:dwaoiju277218ywdhdnakas72' % (timestamp, username)
     environ = {
        'tiddlyweb.usersign': {'name': username},
@@ -168,7 +168,7 @@ def test_post_data_form_urlencoded():
     user.set_password('foobar')
     store.put(user)
     store.put(Bag('foo_public'))
-    timestamp = datetime.now().strftime('%Y%m%d%H')
+    timestamp = datetime.utcnow().strftime('%Y%m%d%H')
     secret = config['secret']
     nonce = '%s:%s:%s' % (timestamp, user.usersign,
         sha('%s:%s:%s:%s' % (user.usersign, timestamp, hostname, secret)).
@@ -209,7 +209,7 @@ def test_post_data_multipart_form():
     user = User('foo')
     user.set_password('foobar')
     store.put(user)
-    timestamp = datetime.now().strftime('%Y%m%d%H')
+    timestamp = datetime.utcnow().strftime('%Y%m%d%H')
     secret = config['secret']
     nonce = '%s:%s:%s' % (timestamp, user.usersign,
         sha('%s:%s:%s:%s' % (user.usersign, timestamp, hostname, secret)).
@@ -262,7 +262,7 @@ def test_nonce_not_left_over():
     user = User('foo')
     user.set_password('foobar')
     store.put(user)
-    timestamp = datetime.now().strftime('%Y%m%d%H')
+    timestamp = datetime.utcnow().strftime('%Y%m%d%H')
     secret = config['secret']
     nonce = '%s:%s:%s' % (timestamp, user.usersign,
         sha('%s:%s:%s:%s' % (user.usersign, timestamp, hostname, secret)).
@@ -311,7 +311,7 @@ def test_cookie_set():
 
     assert response['status'] == '200', content
 
-    time = datetime.now().strftime('%Y%m%d%H')
+    time = datetime.utcnow().strftime('%Y%m%d%H')
     cookie = 'csrf_token=%s:%s:%s' % (time, user.usersign,
         sha('%s:%s:%s:%s' % (user.usersign,
         time, hostname, config['secret'])).hexdigest())
@@ -340,7 +340,7 @@ def test_no_cookie_sent():
     store.put(user)
 
     user_cookie = get_auth('foo', 'foobar')
-    time = datetime.now().strftime('%Y%m%d%H')
+    time = datetime.utcnow().strftime('%Y%m%d%H')
     token_cookie = 'csrf_token=%s:%s:%s' % (time, user.usersign,
         sha('%s:%s:%s:%s' % (user.usersign,
         time, hostname, config['secret'])).hexdigest())
@@ -379,7 +379,7 @@ def test_invalid_cookie():
     store.put(user)
 
     user_cookie = get_auth('foo', 'foobar')
-    time = datetime.now() - timedelta(hours=3)
+    time = datetime.utcnow() - timedelta(hours=3)
     time = time.strftime('%Y%m%d%H')
     cookie = 'csrf_token=%s:%s:%s' % (time, user.usersign,
         sha('%s:%s:%s:%s' % (user.usersign,

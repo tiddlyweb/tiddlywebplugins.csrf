@@ -29,30 +29,15 @@ from tiddlywebplugins.csrf import CSRFProtector, InvalidNonceError
 BAD_MATCH_MESSAGE = 'CSRF token does not match'
 
 
-def get_auth(username, password):
-    http = httplib2.Http()
-    response, _ = http.request(
-            'http://0.0.0.0:8080/challenge/cookie_form',
-            body='user=%s&password=%s' % (encode_name(username),
-                encode_name(password)),
-            method='POST',
-            headers={'Content-Type': 'application/x-www-form-urlencoded'})
-    assert response.previous['status'] == '303'
-
-    user_cookie = response.previous['set-cookie']
-    cookie = Cookie.SimpleCookie()
-    cookie.load(user_cookie)
-    return cookie['tiddlyweb_user'].value
-
-
 def setup_module(module):
     if os.path.exists('store'):
         shutil.rmtree('store')
 
     if CSRFProtector not in config['server_request_filters']:
         config['server_request_filters'].append(CSRFProtector)
-                
+
     app = load_app()
+
     def app_fn():
         return app
 
@@ -71,9 +56,11 @@ def test_validator_no_nonce():
     try:
         csrf = CSRFProtector({})
         csrf.check_csrf({}, None)
-        raise AssertionError('check_csrf succeeded when no csrf_token supplied')
+        raise AssertionError(
+                'check_csrf succeeded when no csrf_token supplied')
     except InvalidNonceError, exc:
         assert exc.message == 'No csrf_token supplied'
+
 
 def test_validator_nonce_success():
     """
@@ -88,13 +75,13 @@ def test_validator_nonce_success():
         sha('%s:%s:%s:%s' % (username, timestamp, hostname,
             secret)).hexdigest())
     environ = {
-       'tiddlyweb.usersign': {'name': username},
-       'tiddlyweb.config': {
-           'secret': secret,
-           'server_host': {
-               'host': '0.0.0.0',
-               'port': '8080'
-           }
+        'tiddlyweb.usersign': {'name': username},
+        'tiddlyweb.config': {
+            'secret': secret,
+            'server_host': {
+                'host': '0.0.0.0',
+                'port': '8080'
+            }
         },
         'HTTP_HOST': 'foo.0.0.0.0:8080'
     }
@@ -102,7 +89,8 @@ def test_validator_nonce_success():
     csrf = CSRFProtector({})
     result = csrf.check_csrf(environ, nonce)
 
-    assert result == True
+    assert result is True
+
 
 def test_validator_nonce_fail():
     """
@@ -113,13 +101,13 @@ def test_validator_nonce_fail():
     username = u'f\u00F6o'
     secret = '12345'
     environ = {
-       'tiddlyweb.usersign': {'name': username},
-       'tiddlyweb.config': {
-           'secret': secret,
-           'server_host': {
-               'host': '0.0.0.0',
-               'port': '8080'
-           }
+        'tiddlyweb.usersign': {'name': username},
+        'tiddlyweb.config': {
+            'secret': secret,
+            'server_host': {
+                'host': '0.0.0.0',
+                'port': '8080'
+            }
         },
         'HTTP_HOST': 'foo.0.0.0.0:8080'
     }
@@ -130,6 +118,7 @@ def test_validator_nonce_fail():
         raise AssertionError('check_csrf succeeded when nonce didn\'t match')
     except InvalidNonceError, exc:
         assert exc.message == BAD_MATCH_MESSAGE
+
 
 def test_validator_nonce_hash_fail():
     """
@@ -142,13 +131,13 @@ def test_validator_nonce_hash_fail():
     timestamp = datetime.utcnow().strftime('%Y%m%d%H')
     nonce = '%s:%s:dwaoiju277218ywdhdnakas72' % (timestamp, username)
     environ = {
-       'tiddlyweb.usersign': {'name': username},
-       'tiddlyweb.config': {
-           'secret': secret,
-           'server_host': {
-               'host': '0.0.0.0',
-               'port': '8080'
-           }
+        'tiddlyweb.usersign': {'name': username},
+        'tiddlyweb.config': {
+            'secret': secret,
+            'server_host': {
+                'host': '0.0.0.0',
+                'port': '8080'
+            }
         },
         'HTTP_HOST': hostname
     }
@@ -159,6 +148,7 @@ def test_validator_nonce_hash_fail():
         raise AssertionError('check_csrf succeeded when nonce didn\'t match')
     except InvalidNonceError, exc:
         assert exc.message == BAD_MATCH_MESSAGE
+
 
 def test_post_data_form_urlencoded():
     """
@@ -184,23 +174,25 @@ def test_post_data_form_urlencoded():
 
     print 'nc', nonce, csrf_token
     #test success
-    response, content = http.request('http://foo.0.0.0.0:8080/bags/foo_public/tiddlers',
-        method='POST',
-        headers={
-            'Content-type': 'application/x-www-form-urlencoded',
-            'Cookie': 'tiddlyweb_user="%s"; %s' % (user_cookie, csrf_token)
-        },
-        body='%s&csrf_token=%s' % (data, encode_name(nonce)))
+    response, content = http.request(
+            'http://foo.0.0.0.0:8080/bags/foo_public/tiddlers',
+            method='POST',
+            headers={
+                'Content-type': 'application/x-www-form-urlencoded',
+                'Cookie': 'tiddlyweb_user="%s"; %s' % (user_cookie, csrf_token)
+            },
+            body='%s&csrf_token=%s' % (data, encode_name(nonce)))
     assert response['status'] == '204', content
 
     #test failure
-    response, content = http.request('http://0.0.0.0:8080/bags/foo_public/tiddlers',
-        method='POST',
-        headers={
-            'Content-type': 'application/x-www-form-urlencoded',
-            'Cookie': 'tiddlyweb_user="%s"' % user_cookie
-        },
-        body='%s' % data)
+    response, content = http.request(
+            'http://0.0.0.0:8080/bags/foo_public/tiddlers',
+            method='POST',
+            headers={
+                'Content-type': 'application/x-www-form-urlencoded',
+                'Cookie': 'tiddlyweb_user="%s"' % user_cookie
+            },
+            body='%s' % data)
     assert response['status'] == '400', content
 
 
@@ -237,7 +229,7 @@ Hello World
     response, content = http.request(uri,
         method='POST',
         headers={
-            'Content-Type': 'multipart/form-data; ' \
+            'Content-Type': 'multipart/form-data; '
             'boundary=---------------------------168072824752491622650073',
             'Cookie': 'tiddlyweb_user="%s"' % user_cookie,
             'Content-Length': '390'
@@ -246,16 +238,18 @@ Hello World
     assert response['status'] == '204', content
 
     #test failure
-    response, _ = http.request('http://foo.0.0.0.0:8080/bags/foo_public/tiddlers',
-        method='POST',
-        headers={
-            'Content-Type': 'multipart/form-data; ' \
-            'boundary=---------------------------168072824752491622650073',
-            'Cookie': 'tiddlyweb_user="%s"' % user_cookie,
-            'Content-Length': '267'
-        },
-        body=data)
+    response, _ = http.request(
+            'http://foo.0.0.0.0:8080/bags/foo_public/tiddlers',
+            method='POST',
+            headers={
+                'Content-Type': 'multipart/form-data; '
+                'boundary=---------------------------168072824752491622650073',
+                'Cookie': 'tiddlyweb_user="%s"' % user_cookie,
+                'Content-Length': '267'
+            },
+            body=data)
     assert response['status'] == '400'
+
 
 def test_nonce_not_left_over():
     """
@@ -279,13 +273,14 @@ def test_nonce_not_left_over():
     nonce = quote(nonce.encode('utf-8'), safe=".!~*'():")
 
     #test success
-    response, _ = http.request('http://foo.0.0.0.0:8080/bags/foo_public/tiddlers',
-        method='POST',
-        headers={
-            'Content-type': 'application/x-www-form-urlencoded',
-            'Cookie': 'tiddlyweb_user="%s"' % user_cookie
-        },
-        body='%s&csrf_token=%s' % (data, nonce))
+    response, _ = http.request(
+            'http://foo.0.0.0.0:8080/bags/foo_public/tiddlers',
+            method='POST',
+            headers={
+                'Content-type': 'application/x-www-form-urlencoded',
+                'Cookie': 'tiddlyweb_user="%s"' % user_cookie
+            },
+            body='%s&csrf_token=%s' % (data, nonce))
     assert response['status'] == '204'
 
     new_tiddler = Tiddler('foobar')
@@ -295,7 +290,7 @@ def test_nonce_not_left_over():
     assert new_tiddler.title == 'foobar'
     assert new_tiddler.text == 'hello world'
     assert new_tiddler.fields.get('extra_field') == 'baz'
-    assert new_tiddler.fields.get('nonce') == None
+    assert new_tiddler.fields.get('nonce') is None
 
 
 def test_cookie_set():
@@ -325,6 +320,7 @@ def test_cookie_set():
     assert response['set-cookie'] == quote(cookie.encode('utf-8'),
             safe=".!~*'():=")
 
+
 def test_guest_no_cookie_set():
     """
     Test that we don't get a cookie if we are a guest
@@ -336,6 +332,7 @@ def test_guest_no_cookie_set():
     cookie = response.get('set-cookie')
     if cookie:
         assert 'csrf_token' not in cookie
+
 
 def test_no_cookie_sent():
     """
@@ -375,6 +372,7 @@ def test_no_cookie_sent():
     cookie = response.get('set-cookie')
     assert 'csrf_token' in cookie
     assert 'Expires=' in cookie
+
 
 def test_invalid_cookie():
     """
@@ -422,3 +420,18 @@ def test_invalid_cookie():
         })
 
     assert 'csrf_token' in response.get('set-cookie', '')
+
+
+def get_auth(username, password):
+    response, _ = http.request(
+            'http://0.0.0.0:8080/challenge/cookie_form',
+            body='user=%s&password=%s' % (encode_name(username),
+                encode_name(password)),
+            method='POST',
+            headers={'Content-Type': 'application/x-www-form-urlencoded'})
+    assert response.previous['status'] == '303'
+
+    user_cookie = response.previous['set-cookie']
+    cookie = Cookie.SimpleCookie()
+    cookie.load(user_cookie)
+    return cookie['tiddlyweb_user'].value

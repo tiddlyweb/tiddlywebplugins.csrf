@@ -13,7 +13,9 @@ import Cookie
 from datetime import datetime, timedelta
 from httpexceptor import HTTP400
 
+from tiddlyweb.fixups import unquote, quote
 from tiddlyweb.util import sha
+from tiddlyweb.web.util import encode_name
 
 
 class InvalidNonceError(Exception):
@@ -42,6 +44,7 @@ class CSRFProtector(object):
             if csrf_cookie:
                 try:
                     timestamp, cookie_user, _ = csrf_cookie.value.split(':', 2)
+                    cookie_user = unquote(cookie_user)
                 except ValueError:
                     timestamp = ''
                     cookie_user = ''
@@ -64,7 +67,7 @@ class CSRFProtector(object):
                 user, space, secret = get_nonce_components(environ)
                 nonce = gen_nonce(user, space, now, secret)
                 set_cookie = 'csrf_token=%s' % nonce
-                headers.append(('Set-Cookie', set_cookie.encode()))
+                headers.append(('Set-Cookie', set_cookie))
             start_response(status, headers, exc_info)
 
         def app():
@@ -81,6 +84,8 @@ class CSRFProtector(object):
             return app()
         form = environ['tiddlyweb.query']
         nonce = form.pop('csrf_token', [''])[0]
+        # encode nonce from form so it looks like cookie
+        nonce = quote(nonce.encode('utf-8'), safe=".!~*'():")
         try:
             self.check_csrf(environ, nonce)
         except InvalidNonceError, exc:
@@ -155,6 +160,6 @@ def gen_nonce(username, hostname, timestamp, secret):
 
     the hash is: timestamp:username:hash(user:time:hostname:secret)
     """
-    return '%s:%s:%s' % (timestamp, username,
-        sha('%s:%s:%s:%s' % (username, timestamp, hostname, secret)).
-        hexdigest())
+    return '%s:%s:%s' % (timestamp, encode_name(username),
+        sha('%s:%s:%s:%s' % (encode_name(username), timestamp, hostname,
+            secret)).hexdigest())

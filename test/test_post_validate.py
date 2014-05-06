@@ -21,6 +21,7 @@ from tiddlyweb.model.tiddler import Tiddler
 from tiddlyweb.model.bag import Bag
 from tiddlyweb.model.user import User
 from tiddlyweb.util import sha
+from tiddlyweb.web.util import encode_name
 from tiddlywebplugins.csrf import CSRFProtector, InvalidNonceError
 
 
@@ -31,7 +32,8 @@ def get_auth(username, password):
     http = httplib2.Http()
     response, _ = http.request(
             'http://0.0.0.0:8080/challenge/cookie_form',
-            body='user=%s&password=%s' % (username, password),
+            body='user=%s&password=%s' % (encode_name(username),
+                encode_name(password)),
             method='POST',
             headers={'Content-Type': 'application/x-www-form-urlencoded'})
     assert response.previous['status'] == '303'
@@ -77,13 +79,13 @@ def test_validator_nonce_success():
     test the validator directly
     ensure that it succeeds when the nonce passed in is correct
     """
-    username = 'foo'
+    username = u'f\u00F6o'
     hostname = 'foo.0.0.0.0:8080'
     secret = '12345'
     timestamp = datetime.utcnow().strftime('%Y%m%d%H')
-    nonce = '%s:%s:%s' % (timestamp, username,
-        sha('%s:%s:%s:%s' % (username, timestamp, hostname, secret)).
-        hexdigest())
+    nonce = '%s:%s:%s' % (timestamp, encode_name(username),
+        sha('%s:%s:%s:%s' % (encode_name(username), timestamp, hostname,
+            secret)).hexdigest())
     environ = {
        'tiddlyweb.usersign': {'name': username},
        'tiddlyweb.config': {
@@ -107,7 +109,7 @@ def test_validator_nonce_fail():
     ensure that it fails when the nonce doesn't match
     """
     nonce = 'dwaoiju277218ywdhdnakas72'
-    username = 'foo'
+    username = u'f\u00F6o'
     secret = '12345'
     environ = {
        'tiddlyweb.usersign': {'name': username},
@@ -133,7 +135,7 @@ def test_validator_nonce_hash_fail():
     test the validator directly
     ensure that it fails when the hash section of the nonce is incorrect
     """
-    username = 'foo'
+    username = u'f\u00F6o'
     hostname = 'foo.0.0.0.0:8080'
     secret = '12345'
     timestamp = datetime.utcnow().strftime('%Y%m%d%H')
@@ -164,17 +166,17 @@ def test_post_data_form_urlencoded():
     """
     store = get_store(config)
     hostname = 'foo.0.0.0.0:8080'
-    user = User('foo')
+    user = User(u'f\u00F6o')
     user.set_password('foobar')
     store.put(user)
     store.put(Bag('foo_public'))
     timestamp = datetime.utcnow().strftime('%Y%m%d%H')
     secret = config['secret']
-    nonce = '%s:%s:%s' % (timestamp, user.usersign,
-        sha('%s:%s:%s:%s' % (user.usersign, timestamp, hostname, secret)).
-        hexdigest())
+    nonce = '%s:%s:%s' % (timestamp, encode_name(user.usersign),
+        sha('%s:%s:%s:%s' % (encode_name(user.usersign), timestamp, hostname,
+            secret)).hexdigest())
 
-    user_cookie = get_auth('foo', 'foobar')
+    user_cookie = get_auth(u'f\u00F6o', 'foobar')
     csrf_token = 'csrf_token="%s"' % nonce
     data = 'title=foobar&text=hello%20world'
 
@@ -206,16 +208,16 @@ def test_post_data_multipart_form():
     """
     store = get_store(config)
     hostname = 'foo.0.0.0.0:8080'
-    user = User('foo')
+    user = User(u'f\u00F6o')
     user.set_password('foobar')
     store.put(user)
     timestamp = datetime.utcnow().strftime('%Y%m%d%H')
     secret = config['secret']
-    nonce = '%s:%s:%s' % (timestamp, user.usersign,
-        sha('%s:%s:%s:%s' % (user.usersign, timestamp, hostname, secret)).
-        hexdigest())
+    nonce = '%s:%s:%s' % (timestamp, encode_name(user.usersign),
+        sha('%s:%s:%s:%s' % (encode_name(user.usersign), timestamp, hostname,
+            secret)).hexdigest())
 
-    user_cookie = get_auth('foo', 'foobar')
+    user_cookie = get_auth(u'f\u00F6o', 'foobar')
     csrf_token = 'csrf_token=%s' % nonce
     data = '''---------------------------168072824752491622650073
 Content-Disposition: form-data; name="title"
@@ -259,16 +261,16 @@ def test_nonce_not_left_over():
     """
     store = get_store(config)
     hostname = 'foo.0.0.0.0:8080'
-    user = User('foo')
+    user = User(u'f\u00F6o')
     user.set_password('foobar')
     store.put(user)
     timestamp = datetime.utcnow().strftime('%Y%m%d%H')
     secret = config['secret']
-    nonce = '%s:%s:%s' % (timestamp, user.usersign,
-        sha('%s:%s:%s:%s' % (user.usersign, timestamp, hostname, secret)).
-        hexdigest())
+    nonce = '%s:%s:%s' % (timestamp, encode_name(user.usersign),
+        sha('%s:%s:%s:%s' % (encode_name(user.usersign), timestamp, hostname,
+            secret)).hexdigest())
 
-    user_cookie = get_auth('foo', 'foobar')
+    user_cookie = get_auth(u'f\u00F6o', 'foobar')
     data = 'title=foobar&text=hello%20world&extra_field=baz'
 
     #test success
@@ -297,11 +299,12 @@ def test_cookie_set():
     """
     store = get_store(config)
     hostname = 'foo.0.0.0.0:8080'
-    user = User('foo')
+    user = User(u'f\u00F6o')
     user.set_password('foobar')
     store.put(user)
 
-    user_cookie = get_auth('foo', 'foobar')
+# LATIN SMALL LETTER O WITH DIAERESIS Unicode: U+00F6, UTF-8: C3 B6
+    user_cookie = get_auth(u'f\u00F6o', 'foobar')
 
     response, content = http.request('http://foo.0.0.0.0:8080/',
         method='GET',
@@ -312,8 +315,8 @@ def test_cookie_set():
     assert response['status'] == '200', content
 
     time = datetime.utcnow().strftime('%Y%m%d%H')
-    cookie = 'csrf_token=%s:%s:%s' % (time, user.usersign,
-        sha('%s:%s:%s:%s' % (user.usersign,
+    cookie = 'csrf_token=%s:%s:%s' % (time, encode_name(user.usersign),
+        sha('%s:%s:%s:%s' % (encode_name(user.usersign),
         time, hostname, config['secret'])).hexdigest())
     assert response['set-cookie'] == cookie
 
@@ -335,15 +338,15 @@ def test_no_cookie_sent():
     """
     store = get_store(config)
     hostname = 'foo.0.0.0.0:8080'
-    user = User('foo')
+    user = User(u'f\u00F6o')
     user.set_password('foobar')
     store.put(user)
 
-    user_cookie = get_auth('foo', 'foobar')
+    user_cookie = get_auth(u'f\u00F6o', 'foobar')
     time = datetime.utcnow().strftime('%Y%m%d%H')
-    token_cookie = 'csrf_token=%s:%s:%s' % (time, user.usersign,
-        sha('%s:%s:%s:%s' % (user.usersign,
-        time, hostname, config['secret'])).hexdigest())
+    token_cookie = 'csrf_token=%s:%s:%s' % (time, encode_name(user.usersign),
+        sha('%s:%s:%s:%s' % (encode_name(user.usersign), time, hostname,
+            config['secret'])).hexdigest())
 
     response, _ = http.request('http://foo.0.0.0.0:8080/status',
         method='GET',
@@ -374,15 +377,15 @@ def test_invalid_cookie():
     """
     store = get_store(config)
     hostname = 'foo.0.0.0.0:8080'
-    user = User('foo')
+    user = User(u'f\u00F6o')
     user.set_password('foobar')
     store.put(user)
 
-    user_cookie = get_auth('foo', 'foobar')
+    user_cookie = get_auth(u'f\u00F6o', 'foobar')
     time = datetime.utcnow() - timedelta(hours=3)
     time = time.strftime('%Y%m%d%H')
-    cookie = 'csrf_token=%s:%s:%s' % (time, user.usersign,
-        sha('%s:%s:%s:%s' % (user.usersign,
+    cookie = 'csrf_token=%s:%s:%s' % (time, encode_name(user.usersign),
+        sha('%s:%s:%s:%s' % (encode_name(user.usersign),
         time, hostname, config['secret'])).hexdigest())
 
     response, _ = http.request('http://foo.0.0.0.0:8080/status',

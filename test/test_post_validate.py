@@ -16,6 +16,7 @@ from datetime import datetime, timedelta
 
 from tiddlywebplugins.utils import get_store
 from tiddlyweb.config import config
+from tiddlyweb.fixups import quote
 from tiddlyweb.web.serve import load_app
 from tiddlyweb.model.tiddler import Tiddler
 from tiddlyweb.model.bag import Bag
@@ -83,8 +84,8 @@ def test_validator_nonce_success():
     hostname = 'foo.0.0.0.0:8080'
     secret = '12345'
     timestamp = datetime.utcnow().strftime('%Y%m%d%H')
-    nonce = '%s:%s:%s' % (timestamp, encode_name(username),
-        sha('%s:%s:%s:%s' % (encode_name(username), timestamp, hostname,
+    nonce = '%s:%s:%s' % (timestamp, username,
+        sha('%s:%s:%s:%s' % (username, timestamp, hostname,
             secret)).hexdigest())
     environ = {
        'tiddlyweb.usersign': {'name': username},
@@ -172,14 +173,16 @@ def test_post_data_form_urlencoded():
     store.put(Bag('foo_public'))
     timestamp = datetime.utcnow().strftime('%Y%m%d%H')
     secret = config['secret']
-    nonce = '%s:%s:%s' % (timestamp, encode_name(user.usersign),
-        sha('%s:%s:%s:%s' % (encode_name(user.usersign), timestamp, hostname,
+    nonce = '%s:%s:%s' % (timestamp, user.usersign,
+        sha('%s:%s:%s:%s' % (user.usersign, timestamp, hostname,
             secret)).hexdigest())
 
     user_cookie = get_auth(u'f\u00F6o', 'foobar')
-    csrf_token = 'csrf_token="%s"' % nonce
+    csrf_token = 'csrf_token="%s"' % quote(nonce.encode('utf-8'),
+            safe=".!~*'():")
     data = 'title=foobar&text=hello%20world'
 
+    print 'nc', nonce, csrf_token
     #test success
     response, content = http.request('http://foo.0.0.0.0:8080/bags/foo_public/tiddlers',
         method='POST',
@@ -187,7 +190,7 @@ def test_post_data_form_urlencoded():
             'Content-type': 'application/x-www-form-urlencoded',
             'Cookie': 'tiddlyweb_user="%s"; %s' % (user_cookie, csrf_token)
         },
-        body='%s&csrf_token=%s' % (data, nonce))
+        body='%s&csrf_token=%s' % (data, encode_name(nonce)))
     assert response['status'] == '204', content
 
     #test failure
@@ -213,8 +216,8 @@ def test_post_data_multipart_form():
     store.put(user)
     timestamp = datetime.utcnow().strftime('%Y%m%d%H')
     secret = config['secret']
-    nonce = '%s:%s:%s' % (timestamp, encode_name(user.usersign),
-        sha('%s:%s:%s:%s' % (encode_name(user.usersign), timestamp, hostname,
+    nonce = '%s:%s:%s' % (timestamp, user.usersign,
+        sha('%s:%s:%s:%s' % (user.usersign, timestamp, hostname,
             secret)).hexdigest())
 
     user_cookie = get_auth(u'f\u00F6o', 'foobar')
@@ -266,12 +269,14 @@ def test_nonce_not_left_over():
     store.put(user)
     timestamp = datetime.utcnow().strftime('%Y%m%d%H')
     secret = config['secret']
-    nonce = '%s:%s:%s' % (timestamp, encode_name(user.usersign),
-        sha('%s:%s:%s:%s' % (encode_name(user.usersign), timestamp, hostname,
+    nonce = '%s:%s:%s' % (timestamp, user.usersign,
+        sha('%s:%s:%s:%s' % (user.usersign, timestamp, hostname,
             secret)).hexdigest())
 
     user_cookie = get_auth(u'f\u00F6o', 'foobar')
     data = 'title=foobar&text=hello%20world&extra_field=baz'
+
+    nonce = quote(nonce.encode('utf-8'), safe=".!~*'():")
 
     #test success
     response, _ = http.request('http://foo.0.0.0.0:8080/bags/foo_public/tiddlers',
@@ -303,7 +308,6 @@ def test_cookie_set():
     user.set_password('foobar')
     store.put(user)
 
-# LATIN SMALL LETTER O WITH DIAERESIS Unicode: U+00F6, UTF-8: C3 B6
     user_cookie = get_auth(u'f\u00F6o', 'foobar')
 
     response, content = http.request('http://foo.0.0.0.0:8080/',
@@ -315,10 +319,11 @@ def test_cookie_set():
     assert response['status'] == '200', content
 
     time = datetime.utcnow().strftime('%Y%m%d%H')
-    cookie = 'csrf_token=%s:%s:%s' % (time, encode_name(user.usersign),
-        sha('%s:%s:%s:%s' % (encode_name(user.usersign),
+    cookie = 'csrf_token=%s:%s:%s' % (time, user.usersign,
+        sha('%s:%s:%s:%s' % (user.usersign,
         time, hostname, config['secret'])).hexdigest())
-    assert response['set-cookie'] == cookie
+    assert response['set-cookie'] == quote(cookie.encode('utf-8'),
+            safe=".!~*'():=")
 
 def test_guest_no_cookie_set():
     """
